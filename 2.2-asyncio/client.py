@@ -26,9 +26,14 @@ def get_count():
     Выясняет количество персонажей
     """
     url = "https://swapi.dev/api/people/"
-    quantity = requests.get(url).json()['count']
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+    quantity = data['count']
     print(f'Найдено персонажей - {quantity}')
     return quantity
+
+    asyncio.run(get_count())
 
 
 async def get_data(url, session):
@@ -79,7 +84,7 @@ async def main():
                 'gender': instance['gender'],
                 'hair_color': instance['hair_color'],
                 'height': instance['height'],
-                'homeworld': instance['name'],
+                'homeworld': asyncio.create_task(get_names(instance['planets'], 'name', session)),
                 'mass': instance['mass'],
                 'name': instance['name'],
                 'skin_color': instance['skin_color'],
@@ -93,7 +98,7 @@ async def main():
             person_tasks.append(person['vehicles'])
             persons.append(person)
     await asyncio.gather(*person_tasks)
-    await session.close()
+    finally: await session.close()
     for i in range(0, count_person):
         persons[i]['films'] = persons[i]['films'].result()
         persons[i]['species'] = persons[i]['species'].result()
